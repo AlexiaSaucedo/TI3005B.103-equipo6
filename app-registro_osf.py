@@ -1,3 +1,4 @@
+import json
 import streamlit as st
 import pandas as pd
 from google.cloud import firestore
@@ -5,31 +6,24 @@ from google.oauth2 import service_account
 
 st.title("Registro OSF")
 
-import json
-key_dict = json.loads(st.secrets["textkey"])
-creds = service_account.Credentials.from_service_account_info(key_dict)
-db =firestore.Client.from_service_account_json("registro.json")
-#db = firestore.Client(credentials=creds, project="registro")
+# key_dict = json.loads(st.secrets["textkey"])
+# creds = service_account.Credentials.from_service_account_info(key_dict)
+# db = firestore.Client(credentials=creds, project="registro")
+db = firestore.Client.from_service_account_json("registro.json")
 
 dbOrganizaciones = db.collection(u'organizaciones')
 
-# @st.cache
-# def load_data(nrows):
-#     data = pd.read_csv(DATA_URL, nrows=nrows)
-#     def lowercase(x): return str(x).lower()
-#     return data
 
-def filtrar_org(organizacion):
-    filtered_data = data[data['Organizacion_SF'] == organizacion]
-    return filtered_data
-
-def filtrar_proyecto(proyecto):
-    filtered_data = data[data['name'].str.upper().str.contains(proyecto)]
-    return filtered_data
+def filtrarProyectosByOrg(codigo_org):
+    # filtered_data = data[data['Organizacion_SF'] == organizacion]
+    proy_ref = list(db.collection(u'proyectos').stream())
+    proy_dict = list(map(lambda x: x.to_dict(), proy_ref))
+    data = pd.DataFrame(proy_dict)
+    return data[data['Código_Organización'] == codigo_org]
+    # return data[data['Codigo_Organizacion'] == codigo_org]
 
 
-
-#organizacion = st.selectbox('Seleccionar Organizacion', 'y','n')
+# organizacion = st.selectbox('Seleccionar Organizacion', 'y','n')
 # st.text_input('Código')
 # orgBtn = st.button('Buscar Proyectos')
 
@@ -39,13 +33,18 @@ def filtrar_proyecto(proyecto):
 #     st.write(f"Total de proyectos : {count_row}")
 #     st.write(filterbyorg)
 
+org_ref = list(db.collection(u'organizaciones').stream())
+org_dict = list(map(lambda x: x.to_dict(), org_ref))
+org_dataframe = pd.DataFrame(org_dict)
+# st.dataframe(names_dataframe)
 
-names_ref = list(db.collection(u'organizaciones').stream())
-names_dict = list(map(lambda x: x.to_dict(), names_ref))
-names_dataframe = pd.DataFrame(names_dict)
-st.dataframe(names_dataframe)
+organizacion = st.selectbox(
+    'Seleccionar Organizacion', org_dataframe['Organizacion_SF'].unique())
+codigo_org = st.text_input('Código')
+orgBtn = st.button('Buscar Proyectos')
 
-organizacion = st.selectbox('Seleccionar Organizacion', names_dataframe)
-
-# st.dataframe(data)
-
+if (orgBtn):
+    filterbyorg = filtrarProyectosByOrg(codigo_org)
+    st.write(filterbyorg.loc[:, ['Proyecto_nombre', 'Plazas_autorizadas']])
+#     count_row = filterbyorg.shape[0]
+#     st.write(f"Total de proyectos : {count_row}")
