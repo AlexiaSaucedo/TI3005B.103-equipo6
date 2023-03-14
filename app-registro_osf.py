@@ -1,8 +1,9 @@
+from google.oauth2 import service_account
+from google.cloud import firestore
 import json
 import streamlit as st
 import pandas as pd
-from google.cloud import firestore
-from google.oauth2 import service_account
+from st_aggrid import AgGrid
 
 st.title("Registro OSF")
 
@@ -23,20 +24,21 @@ def filtrarProyectosByOrg(codigo_org):
     # return data[data['Codigo_Organizacion'] == codigo_org]
 
 
-# organizacion = st.selectbox('Seleccionar Organizacion', 'y','n')
-# st.text_input('Código')
-# orgBtn = st.button('Buscar Proyectos')
+def filtrarRegistroByProy(codigo_proy):
+    # filtered_data = data[data['Organizacion_SF'] == organizacion]
+    reg_ref = list(db.collection(u'registro').stream())
+    reg_dict = list(map(lambda x: x.to_dict(), reg_ref))
+    data = pd.DataFrame(reg_dict)
+    return data[data['CRN'] == int(codigo_proy)]
+    # return data[data['Codigo_Organizacion'] == codigo_org]
 
-# if (orgBtn):
-#     filterbyorg = filtrar_org(organizacion)
-#     count_row = filterbyorg.shape[0]
-#     st.write(f"Total de proyectos : {count_row}")
-#     st.write(filterbyorg)
 
 org_ref = list(db.collection(u'organizaciones').stream())
 org_dict = list(map(lambda x: x.to_dict(), org_ref))
 org_dataframe = pd.DataFrame(org_dict)
-# st.dataframe(names_dataframe)
+# st.dataframe(org_dataframe)
+# AgGrid(org_dataframe)
+
 
 organizacion = st.selectbox(
     'Seleccionar Organizacion', org_dataframe['Organizacion_SF'].unique())
@@ -45,6 +47,17 @@ orgBtn = st.button('Buscar Proyectos')
 
 if (orgBtn):
     filterbyorg = filtrarProyectosByOrg(codigo_org)
-    st.write(filterbyorg.loc[:, ['Proyecto_nombre', 'Plazas_autorizadas']])
-#     count_row = filterbyorg.shape[0]
-#     st.write(f"Total de proyectos : {count_row}")
+    count_row = filterbyorg.shape[0]
+    st.write(f"Total de proyectos : {count_row}")
+    st.write(
+        filterbyorg.loc[:, ['CRN', 'Proyecto_nombre', 'Plazas_autorizadas']])
+    # AgGrid(filterbyorg)
+
+codigo_proyecto = st.text_input('CRN:')
+proyectoBtn = st.button('Editar proyecto')
+
+if (proyectoBtn):
+    filterbyp = filtrarRegistroByProy(codigo_proyecto)
+    # st.subheader( f" Resultado : {filterbyorg[filterbyorg['CRN'] == int_codigo]}")
+    st.write(
+        filterbyp.loc[:, ['Matricula', 'Estatus_de_inscripción ', 'Comentarios']])
